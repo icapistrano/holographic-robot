@@ -1,0 +1,50 @@
+name: Deploy Holographic Robot Demo to Portfolio
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout Holographic Robot Demo repo
+      - uses: actions/checkout@v4
+
+      # 2. Setup Node
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      # 3. Install dependencies
+      - run: npm ci
+
+      # 4. Build Holographic Robot Demo
+      - run: npm run build
+
+      # 5. Checkout portfolio-25
+      - uses: actions/checkout@v4
+        with:
+          repository: icapistrano/portfolio-25
+          path: portfolio-25
+          token: ${{ secrets.DEPLOY_TOKEN }}
+
+      # 6. Copy build to projects/holographic-robot
+      - run: |
+          rm -rf portfolio-25/projects/holographic-robot
+          mkdir -p portfolio-25/projects/holographic-robot
+          cp -r dist/* portfolio-25/projects/holographic-robot/
+
+      # 7. Commit & push
+      - run: |
+          cd portfolio-25
+          git config user.name "github-actions[bot]"
+          git config user.email "actions@github.com"
+          git add .
+          if ! git diff --cached --quiet; then
+            git commit -m "Deploy Holographic Robot Demo: $GITHUB_SHA"
+            git push origin HEAD:main
+          else
+            echo "No changes to deploy"
+          fi
